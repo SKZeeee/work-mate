@@ -1,0 +1,19 @@
+{
+  "name": "work-friends",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Always-on-top floating pixel friend for desktop.",
+  "main": "build/electron/main.js",
+  "scripts": {
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "build:renderer": "tsc -p tsconfig.renderer.json",
+    "build": "npm run build:electron && npm run build:renderer",
+    "start": "electron .",
+    "dev": "npm run build && npm start"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "electron": "^38.8.4",
+    "typescript": "^5.9.3"
+  }
+}
