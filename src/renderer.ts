@@ -12,7 +12,9 @@ const SPRITE_SCALE = 4;
 const FRAME_DURATION_MS = 420;
 const FLOAT_SPEED = 0.0022;
 const FLOAT_AMPLITUDE = 6;
-const BASE_OFFSET_X = Math.floor((WINDOW_SIZE - SPRITE_SIZE * SPRITE_SCALE) / 2);
+const BASE_OFFSET_X = Math.floor(
+  (WINDOW_SIZE - SPRITE_SIZE * SPRITE_SCALE) / 2,
+);
 const BASE_OFFSET_Y = 18;
 
 const palette = {
@@ -23,7 +25,7 @@ const palette = {
   brain: "#f7a4d0",
   brainDark: "#db6fab",
   eye: "#122847",
-  shine: "rgba(255, 255, 255, 0.95)"
+  shine: "rgba(255, 255, 255, 0.95)",
 };
 
 const commonFrame: PixelRect[] = [
@@ -58,10 +60,10 @@ const commonFrame: PixelRect[] = [
   { x: 11, y: 7, w: 3, h: 2, color: palette.brain },
   { x: 14, y: 6, w: 4, h: 3, color: palette.brainDark },
   { x: 18, y: 7, w: 3, h: 2, color: palette.brain },
-  { x: 12, y: 10, w: 1, h: 1, color: palette.eye },
-  { x: 19, y: 10, w: 1, h: 1, color: palette.eye },
+  { x: 12, y: 10, w: 1, h: 2, color: palette.eye },
+  { x: 19, y: 10, w: 1, h: 2, color: palette.eye },
   { x: 10, y: 5, w: 2, h: 1, color: palette.shine },
-  { x: 12, y: 6, w: 1, h: 1, color: palette.shine }
+  { x: 12, y: 6, w: 1, h: 1, color: palette.shine },
 ];
 
 const animationFrames: PixelRect[][] = [
@@ -74,7 +76,7 @@ const animationFrames: PixelRect[][] = [
     { x: 19, y: 18, w: 2, h: 5, color: palette.outline },
     { x: 19, y: 18, w: 1, h: 5, color: palette.bodyDark },
     { x: 11, y: 23, w: 2, h: 1, color: palette.outline },
-    { x: 20, y: 23, w: 2, h: 1, color: palette.outline }
+    { x: 20, y: 23, w: 2, h: 1, color: palette.outline },
   ],
   [
     ...commonFrame,
@@ -87,15 +89,15 @@ const animationFrames: PixelRect[][] = [
     { x: 10, y: 22, w: 2, h: 1, color: palette.outline },
     { x: 21, y: 22, w: 2, h: 1, color: palette.outline },
     { x: 14, y: 7, w: 4, h: 2, color: palette.brain },
-    { x: 18, y: 8, w: 2, h: 1, color: palette.brainDark }
-  ]
+    { x: 18, y: 8, w: 2, h: 1, color: palette.brainDark },
+  ],
 ];
 
 function drawFrame(
   context: CanvasRenderingContext2D,
   frame: PixelRect[],
   offsetX: number,
-  offsetY: number
+  offsetY: number,
 ) {
   for (const rect of frame) {
     context.fillStyle = rect.color;
@@ -103,7 +105,7 @@ function drawFrame(
       offsetX + rect.x * SPRITE_SCALE,
       offsetY + rect.y * SPRITE_SCALE,
       rect.w * SPRITE_SCALE,
-      rect.h * SPRITE_SCALE
+      rect.h * SPRITE_SCALE,
     );
   }
 }
@@ -129,8 +131,11 @@ function startAnimation(context: CanvasRenderingContext2D) {
   const render = (time: number) => {
     context.clearRect(0, 0, WINDOW_SIZE, WINDOW_SIZE);
 
-    const frameIndex = Math.floor(time / FRAME_DURATION_MS) % animationFrames.length;
-    const bobOffset = Math.round(Math.sin(time * FLOAT_SPEED) * FLOAT_AMPLITUDE);
+    const frameIndex =
+      Math.floor(time / FRAME_DURATION_MS) % animationFrames.length;
+    const bobOffset = Math.round(
+      Math.sin(time * FLOAT_SPEED) * FLOAT_AMPLITUDE,
+    );
     const shadowWidth = 34 + Math.round(Math.cos(time * FLOAT_SPEED) * 2);
 
     context.fillStyle = "rgba(15, 31, 52, 0.18)";
@@ -140,7 +145,7 @@ function startAnimation(context: CanvasRenderingContext2D) {
       context,
       animationFrames[frameIndex],
       BASE_OFFSET_X,
-      BASE_OFFSET_Y + bobOffset
+      BASE_OFFSET_Y + bobOffset,
     );
     window.requestAnimationFrame(render);
   };
