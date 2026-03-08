@@ -11,6 +11,11 @@
     "start": "electron .",
     "dev": "npm run build && npm start"
   },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.1004.0",
+    "@aws-sdk/credential-providers": "^3.1004.0",
+    "dotenv": "^17.3.1"
+  },
   "devDependencies": {
     "@types/node": "^24.12.0",
     "electron": "^38.8.4",

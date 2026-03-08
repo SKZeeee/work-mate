@@ -6,6 +6,19 @@ type PixelRect = {
   color: string;
 };
 
+type BedrockState = {
+  status: "idle" | "loading" | "ready" | "error";
+  message: string;
+  detail: string;
+  updatedAt: string | null;
+};
+
+type DesktopFriendApi = {
+  getState(): Promise<BedrockState>;
+  onStateChange(callback: (state: BedrockState) => void): () => void;
+  requestRefresh(): void;
+};
+
 const WINDOW_SIZE = 160;
 const SPRITE_SIZE = 32;
 const SPRITE_SCALE = 4;
@@ -93,6 +106,10 @@ const animationFrames: PixelRect[][] = [
   ],
 ];
 
+function getDesktopFriendApi() {
+  return (window as Window & { desktopFriend?: DesktopFriendApi }).desktopFriend;
+}
+
 function drawFrame(
   context: CanvasRenderingContext2D,
   frame: PixelRect[],
@@ -125,6 +142,89 @@ function setupCanvas(canvas: HTMLCanvasElement) {
   context.scale(devicePixelRatio, devicePixelRatio);
   context.imageSmoothingEnabled = false;
   return context;
+}
+
+function formatUpdatedAt(updatedAt: string | null) {
+  if (!updatedAt) {
+    return "未取得";
+  }
+
+  return new Intl.DateTimeFormat("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(updatedAt));
+}
+
+function getStatusLabel(status: BedrockState["status"]) {
+  if (status === "ready") {
+    return "応答あり";
+  }
+
+  if (status === "loading") {
+    return "更新中";
+  }
+
+  if (status === "error") {
+    return "エラー";
+  }
+
+  return "準備中";
+}
+
+function renderBedrockState(state: BedrockState) {
+  const statusElement = document.getElementById("messageStatus");
+  const updatedAtElement = document.getElementById("messageUpdatedAt");
+  const textElement = document.getElementById("messageText");
+  const detailElement = document.getElementById("messageDetail");
+
+  if (
+    !(statusElement instanceof HTMLSpanElement) ||
+    !(updatedAtElement instanceof HTMLElement) ||
+    !(textElement instanceof HTMLParagraphElement) ||
+    !(detailElement instanceof HTMLParagraphElement)
+  ) {
+    return;
+  }
+
+  statusElement.textContent = getStatusLabel(state.status);
+  statusElement.dataset.state = state.status;
+  updatedAtElement.textContent = state.updatedAt
+    ? `更新 ${formatUpdatedAt(state.updatedAt)}`
+    : "未取得";
+  textElement.textContent = state.message;
+  detailElement.textContent = state.detail;
+}
+
+function setupBedrockState() {
+  const desktopFriendApi = getDesktopFriendApi();
+
+  if (!desktopFriendApi) {
+    renderBedrockState({
+      status: "error",
+      message: "Bedrock 連携の初期化に失敗しました。",
+      detail: "preload API を読み込めませんでした。",
+      updatedAt: null,
+    });
+    return;
+  }
+
+  void desktopFriendApi
+    .getState()
+    .then((state) => {
+      renderBedrockState(state);
+    })
+    .catch((error: unknown) => {
+      renderBedrockState({
+        status: "error",
+        message: "Bedrock 状態の取得に失敗しました。",
+        detail: error instanceof Error ? error.message : String(error),
+        updatedAt: null,
+      });
+    });
+
+  desktopFriendApi.onStateChange((state) => {
+    renderBedrockState(state);
+  });
 }
 
 function startAnimation(context: CanvasRenderingContext2D) {
@@ -160,6 +260,7 @@ function main() {
   }
 
   const context = setupCanvas(canvas);
+  setupBedrockState();
   startAnimation(context);
 }
 
