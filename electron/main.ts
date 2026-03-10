@@ -5,9 +5,14 @@ import dotenv from "dotenv";
 
 import { createBedrockService, type BedrockState } from "./bedrock";
 
-const WINDOW_WIDTH = 360;
-const WINDOW_HEIGHT = 320;
-const WINDOW_MARGIN = 16;
+const DEFAULT_HUD_OPACITY = 0.76;
+const MIN_HUD_OPACITY = 0.15;
+const MAX_HUD_OPACITY = 1;
+
+type OverlayConfig = {
+  mode: "cockpit-hud";
+  alienBedrockEnabled: boolean;
+};
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -32,48 +37,89 @@ function loadEnvironment() {
 
 loadEnvironment();
 
-function getBottomRightPosition() {
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getHudOpacity() {
+  const rawValue =
+    process.env.HUD_OPACITY?.trim() || process.env.OVERLAY_OPACITY?.trim() || "";
+
+  if (!rawValue) {
+    return DEFAULT_HUD_OPACITY;
+  }
+
+  const numericValue = Number(rawValue);
+  if (!Number.isFinite(numericValue)) {
+    return DEFAULT_HUD_OPACITY;
+  }
+
+  const normalizedValue = numericValue > 1 ? numericValue / 100 : numericValue;
+  return clamp(normalizedValue, MIN_HUD_OPACITY, MAX_HUD_OPACITY);
+}
+
+function isTruthy(value: string | undefined) {
+  return /^(1|true|yes|on)$/i.test(value ?? "");
+}
+
+function isAlienBedrockEnabled() {
+  const cliArgs = new Set(process.argv);
+  return (
+    cliArgs.has("--enable-alien-bedrock") ||
+    cliArgs.has("--alien-bedrock") ||
+    isTruthy(process.env.ALIEN_BEDROCK_ENABLED)
+  );
+}
+
+function getOverlayBounds() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const workArea = primaryDisplay.workArea;
-
   return {
-    x: Math.round(workArea.x + workArea.width - WINDOW_WIDTH - WINDOW_MARGIN),
-    y: Math.round(workArea.y + workArea.height - WINDOW_HEIGHT - WINDOW_MARGIN),
+    x: workArea.x,
+    y: workArea.y,
+    width: workArea.width,
+    height: workArea.height,
   };
 }
 
 function positionWindow(win: BrowserWindow) {
-  const position = getBottomRightPosition();
-  win.setPosition(position.x, position.y, false);
+  win.setBounds(getOverlayBounds(), false);
 }
 
-function sendBedrockState(state: BedrockState) {
+function sendAlienBedrockState(state: BedrockState) {
   if (!mainWindow || mainWindow.isDestroyed()) {
     return;
   }
 
-  mainWindow.webContents.send("bedrock:state-changed", state);
+  mainWindow.webContents.send("alien-bedrock:state-changed", state);
 }
 
-const bedrockService = createBedrockService({
-  onStateChange: sendBedrockState,
-});
+const overlayConfig: OverlayConfig = {
+  mode: "cockpit-hud",
+  alienBedrockEnabled: isAlienBedrockEnabled(),
+};
+
+const bedrockService = overlayConfig.alienBedrockEnabled
+  ? createBedrockService({
+      onStateChange: sendAlienBedrockState,
+    })
+  : null;
 
 function createMainWindow() {
+  const bounds = getOverlayBounds();
   const win = new BrowserWindow({
-    width: WINDOW_WIDTH,
-    height: WINDOW_HEIGHT,
-    useContentSize: true,
+    ...bounds,
     show: false,
     transparent: true,
     frame: false,
     hasShadow: false,
     resizable: false,
-    movable: false,
     maximizable: false,
     minimizable: false,
     fullscreenable: false,
     autoHideMenuBar: true,
+    skipTaskbar: true,
+    focusable: false,
     backgroundColor: "#00000000",
     webPreferences: {
       preload: path.join(app.getAppPath(), "build/electron/preload.js"),
@@ -84,12 +130,18 @@ function createMainWindow() {
 
   mainWindow = win;
   positionWindow(win);
-  win.setAlwaysOnTop(true, "floating");
+  win.setAlwaysOnTop(true, "screen-saver");
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setIgnoreMouseEvents(true, { forward: true });
+  win.setOpacity(getHudOpacity());
   win.loadFile(path.join(app.getAppPath(), "index.html"));
 
   win.webContents.on("did-finish-load", () => {
-    sendBedrockState(bedrockService.getState());
+    if (!bedrockService) {
+      return;
+    }
+
+    sendAlienBedrockState(bedrockService.getState());
   });
 
   win.once("ready-to-show", () => {
@@ -118,11 +170,19 @@ function repositionMainWindow() {
 }
 
 function registerIpcHandlers() {
-  ipcMain.handle("bedrock:get-state", () => {
-    return bedrockService.getState();
+  ipcMain.handle("overlay:get-config", () => {
+    return overlayConfig;
   });
 
-  ipcMain.on("bedrock:refresh", () => {
+  ipcMain.handle("alien-bedrock:get-state", () => {
+    return bedrockService?.getState() ?? null;
+  });
+
+  ipcMain.on("alien-bedrock:refresh", () => {
+    if (!bedrockService) {
+      return;
+    }
+
     void bedrockService.refresh();
   });
 }
@@ -130,7 +190,7 @@ function registerIpcHandlers() {
 app.whenReady().then(() => {
   registerIpcHandlers();
   createMainWindow();
-  bedrockService.start();
+  bedrockService?.start();
 
   screen.on("display-added", repositionMainWindow);
   screen.on("display-removed", repositionMainWindow);
@@ -144,8 +204,9 @@ app.whenReady().then(() => {
 });
 
 app.on("before-quit", () => {
-  bedrockService.stop();
-  ipcMain.removeHandler("bedrock:get-state");
+  ipcMain.removeHandler("overlay:get-config");
+  ipcMain.removeHandler("alien-bedrock:get-state");
+  bedrockService?.stop();
 });
 
 app.on("window-all-closed", () => {

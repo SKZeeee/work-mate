@@ -1,5 +1,10 @@
 import { contextBridge, ipcRenderer } from "electron";
 
+type OverlayConfig = {
+  mode: "cockpit-hud";
+  alienBedrockEnabled: boolean;
+};
+
 type BedrockState = {
   status: "idle" | "loading" | "ready" | "error";
   message: string;
@@ -7,22 +12,26 @@ type BedrockState = {
   updatedAt: string | null;
 };
 
-contextBridge.exposeInMainWorld("desktopFriend", {
-  getState(): Promise<BedrockState> {
-    return ipcRenderer.invoke("bedrock:get-state");
+contextBridge.exposeInMainWorld("workFriendsOverlay", {
+  mode: "cockpit-hud" as const,
+  getConfig(): Promise<OverlayConfig> {
+    return ipcRenderer.invoke("overlay:get-config");
   },
-  onStateChange(callback: (state: BedrockState) => void) {
+  getAlienBedrockState(): Promise<BedrockState | null> {
+    return ipcRenderer.invoke("alien-bedrock:get-state");
+  },
+  onAlienBedrockStateChange(callback: (state: BedrockState) => void) {
     const listener = (_event: Electron.IpcRendererEvent, state: BedrockState) => {
       callback(state);
     };
 
-    ipcRenderer.on("bedrock:state-changed", listener);
+    ipcRenderer.on("alien-bedrock:state-changed", listener);
 
     return () => {
-      ipcRenderer.removeListener("bedrock:state-changed", listener);
+      ipcRenderer.removeListener("alien-bedrock:state-changed", listener);
     };
   },
-  requestRefresh() {
-    ipcRenderer.send("bedrock:refresh");
+  requestAlienBedrockRefresh() {
+    ipcRenderer.send("alien-bedrock:refresh");
   },
 });

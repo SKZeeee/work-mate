@@ -7,28 +7,12 @@
       content="default-src 'self'; script-src 'self'; style-src 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Work Friends</title>
+    <title>Work Friends Cockpit Overlay</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <section class="message-card" aria-live="polite" aria-label="Bedrock response area">
-        <div class="message-card__header">
-          <span id="messageStatus" class="message-status" data-state="idle">準備中</span>
-          <time id="messageUpdatedAt" class="message-time">未取得</time>
-        </div>
-        <p id="messageText" class="message-text">Bedrock からのひとことを待っています。</p>
-        <p id="messageDetail" class="message-detail">起動後に最初の応答を取得します。</p>
-      </section>
-
-      <div class="pet-stage">
-        <canvas
-          id="petCanvas"
-          width="160"
-          height="160"
-          aria-label="Floating pixel friend"
-        ></canvas>
-      </div>
+    <main class="overlay-shell" aria-label="Robot cockpit overlay">
+      <canvas id="hudCanvas" aria-label="Cockpit HUD effect"></canvas>
     </main>
     <script src="./build/renderer/renderer.js"></script>
   </body>

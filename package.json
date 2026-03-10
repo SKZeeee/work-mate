@@ -9,7 +9,9 @@
     "build:renderer": "tsc -p tsconfig.renderer.json",
     "build": "npm run build:electron && npm run build:renderer",
     "start": "electron .",
-    "dev": "npm run build && npm start"
+    "start:alien-bedrock": "electron . --enable-alien-bedrock",
+    "dev": "npm run build && npm start",
+    "dev:alien-bedrock": "npm run build && npm run start:alien-bedrock"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.1004.0",
